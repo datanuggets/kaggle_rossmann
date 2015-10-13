@@ -62,3 +62,7 @@ target/
 
 # IPython Notebook checkpoints
 .ipynb_checkpoints/
+
+# RStudio
+.RData
+.Rhistory
