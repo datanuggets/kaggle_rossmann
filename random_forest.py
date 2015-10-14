@@ -1,6 +1,5 @@
-import pandas
 import numpy
-import time
+import pandas
 
 from math import sqrt
 from sklearn.cross_validation import train_test_split
@@ -11,11 +10,50 @@ from sklearn.preprocessing import LabelEncoder
 RANDOM_STATE = 6578439
 
 
+def split_date(dt):
+    weekday = dt.weekday()
+    return (
+        weekday,
+        1 if weekday >= 5 else 0,
+        dt.day,
+        dt.month,
+        dt.year,
+    )
+
+
+def load_dataset(path):
+    stores_df = pandas.read_csv('data/store.csv')
+    stores_df = stores_df.fillna(-1)
+    stores_df['StoreType'] = LabelEncoder().fit_transform(stores_df['StoreType'])
+    stores_df['Assortment'] = LabelEncoder().fit_transform(stores_df['Assortment'])
+    # Dropping yields a better performance than:
+    # - Giving each month a boolean column
+    # - Replace the string with a count of the months
+    stores_df = stores_df.drop('PromoInterval', axis=1)
+
+    annotated_df = pandas.read_csv(path, parse_dates=['Date'], dtype={'StateHoliday': object})
+    # Dropping yields a better performance than:
+    # - Label encoding
+    annotated_df = annotated_df.drop('StateHoliday', axis=1)
+    # Ugly but fast way to convert Date column to useful, seperate columns
+    (
+        annotated_df['DayOfWeek'],
+        annotated_df['IsWeekend'],
+        annotated_df['DayOfMonth'],
+        annotated_df['Month'],
+        annotated_df['Year']
+    ) = zip(*annotated_df['Date'].map(split_date))
+    annotated_df = annotated_df.drop('Date', axis=1)
+    annotated_df = annotated_df.fillna(-1)
+
+    # Merging dataset and stores
+    return pandas.merge(annotated_df, stores_df, on='Store', how='inner', sort=False)
+
+
 def root_mean_square_percentage(labels, predictions):
-    """ As defined by competition """
     if len(labels) != len(predictions):
         raise Exception("Labels and predictions must be of same length")
-    # Filter pairs where label == 0
+    # Remove pairs where label == 0
     labels, predictions = tuple(
         zip(*filter(lambda x: x[0] != 0, zip(labels, predictions)))
     )
@@ -24,54 +62,57 @@ def root_mean_square_percentage(labels, predictions):
     return sqrt(numpy.power((labels - predictions) / labels, 2.0).sum() / len(labels))
 
 
-if __name__ == '__main__':
-    print "Loading annotated dataset..."
-    annotated_df = pandas.read_csv(
-        'data/train.csv',
-        dtype={
-            'StateHoliday': object,
-            'Sales': float,
-            'Customers': float,
-        },
-        parse_dates=['Date']
-    )
+def main():
+    print "Loading train set..."
+    train_df = load_dataset('data/train.csv')
 
-    print "Preparing annotated dataset for sklearn usage..."
-    annotated_df['StateHoliday'] = LabelEncoder().fit_transform(annotated_df['StateHoliday'])
-
-    print "Enriching annotated dataset with extra features..."
-    annotated_df['DayOfMonth'] = annotated_df['Date'].apply(lambda dt: dt.day)
-    annotated_df['Month'] = annotated_df['Date'].apply(lambda dt: dt.month)
-    annotated_df['Year'] = annotated_df['Date'].apply(lambda dt: dt.year)
-    annotated_df['UnixTimestamp'] = annotated_df['Date'].apply(lambda dt: time.mktime(dt.timetuple()))
-    annotated_df.drop('Date', axis=1, inplace=True)
-
-    print "Splitting train and test sets..."
-    train_df, test_df = train_test_split(
-        annotated_df,
-        test_size=0.10,
+    print "Splitting train and verification sets..."
+    train_df, verification_df = train_test_split(
+        train_df,
+        test_size=0.1,
         random_state=RANDOM_STATE
     )
 
     print "Training random forest..."
+    data_columns = train_df.columns.difference(['Sales', 'Customers'])
     random_forest = RandomForestRegressor(
         n_jobs=-1,  # Auto selects number of cores
         random_state=RANDOM_STATE,
-        max_features="log2",
-        n_estimators=10,
+        max_features=1 / 3.0,
+        n_estimators=100,
     ).fit(
-        X=train_df[train_df.columns.difference(['Sales'])],
+        X=train_df[data_columns],
         y=train_df['Sales'],
     )
     print "Feature importances:"
-    pairs = zip(train_df.columns.difference(['Sales']), random_forest.feature_importances_)
+    pairs = zip(data_columns, random_forest.feature_importances_)
     pairs.sort(key=lambda x: -x[1])
     for column, importance in pairs:
         print " ", column, importance
 
-    print "Testing random forest..."
+    print "Verifying random forest..."
     predictions = random_forest.predict(
-        X=test_df[test_df.columns.difference(['Sales'])],
+        X=verification_df[verification_df.columns.difference(['Sales', 'Customers'])],
     )
     print "Root mean square percentage:"
-    print " ", root_mean_square_percentage(test_df['Sales'], predictions)
+    print " ", root_mean_square_percentage(verification_df['Sales'], predictions)
+
+    print "Loading test dataset..."
+    unannotated_df = load_dataset('data/test.csv')
+
+    print "Getting predictions..."
+    predictions = random_forest.predict(
+        X=unannotated_df[unannotated_df.columns.difference(['Id'])],
+    )
+
+    print "Writing predictions to file..."
+    with open('submission.csv', 'wb') as f:
+        f.write("Id,Sales\n")
+        for i, prediction in enumerate(predictions):
+            f.write("%d,%d\n" % (unannotated_df['Id'][i], int(round(prediction))))
+
+    print "Done"
+
+
+if __name__ == '__main__':
+    main()
