@@ -65,24 +65,25 @@ def root_mean_square_percentage(labels, predictions):
 def main():
     print "Loading train set..."
     train_df = load_dataset('data/train.csv')
+    data_columns = train_df.columns.difference(['Sales', 'Customers'])
+    target_column = 'Sales'
 
     print "Splitting train and verification sets..."
-    train_df, verification_df = train_test_split(
-        train_df,
+    train_index, validation_index = train_test_split(
+        train_df.index,
         test_size=0.1,
         random_state=RANDOM_STATE
     )
 
     print "Training random forest..."
-    data_columns = train_df.columns.difference(['Sales', 'Customers'])
     random_forest = RandomForestRegressor(
         n_jobs=-1,  # Auto selects number of cores
         random_state=RANDOM_STATE,
         max_features=1 / 3.0,
         n_estimators=100,
     ).fit(
-        X=train_df[data_columns],
-        y=train_df['Sales'],
+        X=train_df.loc[train_index, data_columns],
+        y=train_df.loc[train_index, target_column],
     )
     print "Feature importances:"
     pairs = zip(data_columns, random_forest.feature_importances_)
@@ -92,10 +93,24 @@ def main():
 
     print "Verifying random forest..."
     predictions = random_forest.predict(
-        X=verification_df[verification_df.columns.difference(['Sales', 'Customers'])],
+        X=train_df.loc[validation_index, data_columns],
     )
     print "Root mean square percentage:"
-    print " ", root_mean_square_percentage(verification_df['Sales'], predictions)
+    print " ", root_mean_square_percentage(
+        train_df.loc[validation_index, target_column],
+        predictions
+    )
+
+    print "Retraining on the entire training set..."
+    random_forest = RandomForestRegressor(
+        n_jobs=-1,  # Auto selects number of cores
+        random_state=RANDOM_STATE,
+        max_features=1 / 3.0,
+        n_estimators=100,
+    ).fit(
+        X=train_df[data_columns],
+        y=train_df[target_column],
+    )
 
     print "Loading test dataset..."
     unannotated_df = load_dataset('data/test.csv')
