@@ -3,8 +3,50 @@
 
 library(readr)
 library(randomForest)
+library(data.table)
+library(lubridate)
+library(forecast)
 
 set.seed(123)
+
+train <- read_csv("data/train.csv")
+test  <- read_csv("data/test.csv")
+store <- read_csv("data/store.csv")
+
+# Add Year, Month, Week and Day to trainingset
+train = as.data.table(train)
+train$day = day(as.Date(train$Date,"%y/%m/%d"))
+train$week = week(as.Date(train$Date,"%y/%m/%d"))
+train$month = month(as.Date(train$Date,"%y/%m/%d"))
+train$year = year(as.Date(train$Date,"%y/%m/%d"))
+
+# Investigate the number of days stores are open
+days_open = train[,list(count = sum(Open)), by = list(Store)]
+
+hist(days_open$count)
+plot(days_open$Store, days_open$count)
+
+# Investigate the number of days stores are open
+# write.csv(as.data.frame(table(days_open$count)), file='days_open.csv')
+
+######## Funky timeseries stuff ########
+i = 85
+specific_store = train[Store == i]
+# store = train[Store == i & Year > 2014]
+plot(specific_store$Date, specific_store$Sales, type='line')
+
+sales_timeseries = ts(specific_store$Sales, frequency=365, start=c(2015,1))
+sales_timeseries_components = decompose(sales_timeseries)
+plot(sales_timeseries_components)
+
+sales_timeseries_forecast = HoltWinters(sales_timeseries)
+plot(sales_timeseries_forecast)
+sales_timeseries_forecast2 <- forecast.HoltWinters(sales_timeseries_forecast, h=45)
+plot(sales_timeseries_forecast2)
+sales_timeseries_forecast2$mean
+######## End of funky timeseries stuff ########
+
+# Random Forest model
 
 train <- read_csv("data/train.csv")
 test  <- read_csv("data/test.csv")
