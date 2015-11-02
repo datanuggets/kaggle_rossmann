@@ -116,7 +116,7 @@ if __name__ == '__main__':
     Combines a train or test set with the stores set while normalizing existing
     features and calculating new features.
 
-    Usage: python normalize.py train.csv stores.csv normalized.csv.gz
+    Usage: python normalize.py data/train.csv data/store.csv data/normalized.csv.gz
     """
 
     data_path = sys.argv[1]
@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     with gzip.open(output_path, 'wb') as f:
         # First fetch a single row to setup the writer with the required columns
-        reader = csv_dict_reader('data/train.csv')
+        reader = csv_dict_reader(data_path)
         record = reader.next()
         record.update(stores_map[record['Store']])
         normalize_record(record)
