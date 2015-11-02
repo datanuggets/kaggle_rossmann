@@ -153,7 +153,7 @@ if __name__ == '__main__':
         pb.start()
 
         # Normalize and write all rows
-        for i, record in enumerate(csv_dict_reader('data/train.csv')):
+        for i, record in enumerate(csv_dict_reader(data_path)):
             record.update(stores_map[record['Store']])
             normalize_record(record)
             writer.writerow(record)
