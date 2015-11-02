@@ -37,7 +37,7 @@ def one_hot_encode(value, options):
 
 
 def normalize_record(r):
-    date = datetime.strptime(r['Date'], "%Y-%M-%d")
+    date = datetime.strptime(r['Date'], "%Y-%m-%d")
     weekday = date.weekday()
     r['NowDayFromStart'] = (date - START_DATE).days
     r['NowDayOfWeek'] = int(weekday)
@@ -128,7 +128,10 @@ if __name__ == '__main__':
     Combines a train or test set with the stores set while normalizing existing
     features and calculating new features.
 
-    Usage: python normalize.py data/train.csv data/store.csv data/normalized.csv.gz
+    Example usage:
+
+        python normalize.py data/train.csv data/store.csv data/train_normalized.csv.gz
+        python normalize.py data/test.csv data/store.csv data/test_normalized.csv.gz
     """
 
     data_path = sys.argv[1]
