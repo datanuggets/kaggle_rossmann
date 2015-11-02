@@ -5,16 +5,19 @@ import csv
 import gzip
 import sys
 
+
 from datetime import datetime, time
 from isoweek import Week
 from progressbar import ProgressBar
 
 
+# global variables
 PROMO2_INTERVAL = {
     'Jan,Apr,Jul,Oct': {1, 4, 7, 10},
     'Feb,May,Aug,Nov': {2, 5, 8, 11},
     'Mar,Jun,Sept,Dec': {3, 6, 9, 12},
 }
+START_DATE = datetime(2013, 1, 1, 0, 0)
 
 
 def csv_dict_reader(path):
@@ -36,15 +39,14 @@ def one_hot_encode(value, options):
 def normalize_record(r):
     date = datetime.strptime(r['Date'], "%Y-%M-%d")
     weekday = date.weekday()
-    del r['Date']
-
+    r['NowDayFromStart'] = (date - START_DATE).days
     r['NowDayOfWeek'] = int(weekday)
     r['NowDay'] = int(date.day)
     r['NowMonth'] = int(date.month)
     r['NowYear'] = int(date.year)
     r['NowIsWeekend'] = int(weekday >= 5)
     r['NowWeek'] = int(date.date().isocalendar()[1])
-    del r['DayOfWeek']
+    del r['Date'], r['DayOfWeek']
 
     r['Store'] = int(r['Store'])
     r['Promo'] = int(r['Promo'])
