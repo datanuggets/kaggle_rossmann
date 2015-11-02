@@ -10,6 +10,13 @@ from isoweek import Week
 from progressbar import ProgressBar
 
 
+PROMO2_INTERVAL = {
+    'Jan,Apr,Jul,Oct': {1, 4, 7, 10},
+    'Feb,May,Aug,Nov': {2, 5, 8, 11},
+    'Mar,Jun,Sept,Dec': {3, 6, 9, 12},
+}
+
+
 def csv_dict_reader(path):
     with open(path) as f:
         csvf = csv.DictReader(f)
@@ -105,9 +112,12 @@ def normalize_record(r):
     r['Promo2SinceYear'] = int(promo2_since.year)
     del r['Promo2']
 
-    promo_months = set(r['PromoInterval'].split(','))
-    for month in ['Jan', 'Feb', 'Mar', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']:
-        r['Promo2Interval' + month] = int(bool(month in promo_months))
+    (
+        r['Promo2IntervalJanAprJulOct'],
+        r['Promo2IntervalFebMayAugNov'],
+        r['Promo2IntervalMarJunSepDec'],
+    ) = one_hot_encode(r['PromoInterval'], tuple(PROMO2_INTERVAL))
+    r['Promo2Now'] = int(r['NowMonth'] in PROMO2_INTERVAL)
     del r['PromoInterval']
 
 
