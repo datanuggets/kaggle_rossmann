@@ -117,7 +117,7 @@ def normalize_record(r):
         r['Promo2IntervalFebMayAugNov'],
         r['Promo2IntervalMarJunSepDec'],
     ) = one_hot_encode(r['PromoInterval'], tuple(PROMO2_INTERVAL))
-    r['Promo2Now'] = int(r['NowMonth'] in PROMO2_INTERVAL[r['PromoInterval']])
+    r['Promo2Now'] = int(r['NowMonth'] in PROMO2_INTERVAL.get(r['PromoInterval'], set()))
     del r['PromoInterval']
 
 
