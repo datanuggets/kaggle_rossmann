@@ -24,7 +24,11 @@ n_days_test = df_test['NowDayFromStart'].max() - df_test['NowDayFromStart'].min(
 mask = df['NowDayFromStart'].max() - df['NowDayFromStart'] > n_days_test
 df_train_1, df_validate_1 = df.loc[mask], df.loc[~mask]
 
-print "Performing train/validate split on same week numbers of previous year"
+print "Writing data to disk at 'data/train_1.csv' and 'data/validate_1.csv'..."
+df_train_1.to_csv('data/train_1.csv')
+df_validate_1.to_csv('data/validate_1.csv')
+
+print "Performing train/validate split on same week numbers of previous year..."
 mask_validate = (
     (df['NowWeek'] >= df_test['NowWeek'].min()) &
     (df['NowWeek'] <= df_test['NowWeek'].max()) &
@@ -39,9 +43,6 @@ mask_train = (
 )
 df_train_2, df_validate_2 = df.loc[mask_train], df.loc[mask_validate]
 
-
-print "Writing data to disk..."
-df_train_1.to_csv('data/train_1.csv')
+print "Writing data to disk at 'data/train_2.csv' and 'data/validate_2.csv'..."
 df_train_2.to_csv('data/train_2.csv')
-df_validate_1.to_csv('data/validate_1.csv')
 df_validate_2.to_csv('data/validate_2.csv')
