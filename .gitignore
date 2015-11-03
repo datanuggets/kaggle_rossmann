@@ -66,3 +66,16 @@ target/
 # RStudio
 .RData
 .Rhistory
+
+# sandbox folders
+sandbox*
+
+# virtual env
+venv/
+
+# data
+*.csv
+*.gz
+
+# temporary ipython notebooks
+Untitled*.ipynb
