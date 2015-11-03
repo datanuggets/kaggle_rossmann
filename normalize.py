@@ -5,6 +5,7 @@ import csv
 import gzip
 import sys
 
+import pandas as pd
 
 from datetime import datetime, time
 from isoweek import Week
@@ -41,7 +42,7 @@ def normalize_record(r):
     weekday = date.weekday()
     r['NowDayFromStart'] = (date - START_DATE).days
     r['NowDayOfWeek'] = int(weekday)
-    r['NowDay'] = int(date.day)
+    r['NowDayOfMonth'] = int(date.day)
     r['NowMonth'] = int(date.month)
     r['NowYear'] = int(date.year)
     r['NowIsWeekend'] = int(weekday >= 5)
@@ -163,3 +164,51 @@ if __name__ == '__main__':
             pb.update(i)
 
     pb.finish()
+
+    print "One-hotting the remaining integer features..."
+    df = pd.read(output_path, compression='gzip')
+
+    log_features = [
+        "CompetitionDistance",
+        "CompetitionOpenDays",
+        "Promo2RunDays",
+    ]
+
+    integer_features = [
+        "NowDayOfWeek",
+        "NowDayOfMonth",
+        "NowWeek",
+        "NowMonth",
+    ]
+    df[integer_features] = df[integer_features].astype(int)
+    for c in integer_features:
+        df_one_hotted = pd.get_dummies(df[c], prefix=c, prefix_sep='==')
+        df[df_one_hotted.columns] = df_one_hotted
+
+    one_hotted_features = [
+        'AssortmentBasic',
+        'AssortmentExtended',
+        'AssortmentExtra',
+        'CompetitionOpenAvailable',
+        'NowIsWeekend',
+        'Promo',
+        'Promo2IntervalFebMayAugNov',
+        'Promo2IntervalJanAprJulOct',
+        'Promo2IntervalMarJunSepDec',
+        'Promo2Now',
+        'SchoolHoliday',
+        'StateHolidayChristmas',
+        'StateHolidayEaster',
+        'StateHolidayPublic',
+        'StoreTypeA',
+        'StoreTypeB',
+        'StoreTypeC',
+        'StoreTypeD',
+    ]
+    one_hotted_features.extend(c for c in df.columns if '==' in c)
+
+    cols = ['Store', 'Sales', 'NowDayFromStart'] + log_features + one_hotted_features
+
+    print "Saving data to disk again..."
+    with gzip.open(output_path, 'wb') as f:
+        df[cols].to_csv(f, header=None)
