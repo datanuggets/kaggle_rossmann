@@ -211,4 +211,4 @@ if __name__ == '__main__':
 
     print "Saving data to disk again..."
     with gzip.open(output_path, 'wb') as f:
-        df[cols].to_csv(f, header=None)
+        df[cols].to_csv(f, index=None)
